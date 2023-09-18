@@ -34,14 +34,16 @@ def run_scenario(opt, config_yaml):
             scenario_manager.client. \
                 start_recorder("single_town06_carla.log", True)
         # 创建感知车
-        single_cav_list = scenario_manager.create_vehicle_manager(application=['single'],
-                                                    data_dump=False)
+        single_cav_list = scenario_manager.create_vehicle_manager(application=['single'],data_dump=False)
+        scenario_manager.tick()     # 更新场景
+        
+        # 创建RSU
         # rsu_list = \
         #     scenario_manager.create_rsu_manager(data_dump=True)
 
         # create background traffic in carla 创建交通流和背景车辆
-        traffic_manager, bg_veh_list = \
-            scenario_manager.create_traffic_carla()
+        traffic_manager, bg_veh_list = scenario_manager.create_traffic_carla()
+        scenario_manager.tick()     # 更新场景
 
         # create evaluation manager 创建评估管理器
         eval_manager = \
@@ -61,11 +63,11 @@ def run_scenario(opt, config_yaml):
 
         while True:
             scenario_manager.tick()     # 更新场景
-            transform = single_cav_list[1].vehicle.get_transform()
+            transform = single_cav_list[0].vehicle.get_transform()
             spectator.set_transform(carla.Transform(
                 transform.location +
                 carla.Location(
-                    z=70),
+                    z=100),
                 carla.Rotation(
                     pitch=-
                     90)))

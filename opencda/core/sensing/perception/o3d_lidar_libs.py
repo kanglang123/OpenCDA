@@ -157,6 +157,38 @@ def o3d_visualizer_show(vis, count, point_cloud, objects):
             aabb = object_.o3d_bbx
             vis.remove_geometry(aabb)
 
+def o3d_visualizer_show_lidar_only(vis, count, point_cloud):
+    """
+    Visualize the point cloud at runtime.
+
+    Parameters
+    ----------
+    vis : o3d.Visualizer
+        Visualization interface.
+
+    count : int
+        Current step since simulation started.
+
+    point_cloud : o3d.PointCloud
+        Open3d point cloud.
+
+    objects : dict
+        The dictionary containing objects.
+
+    Returns
+    -------
+
+    """
+
+    if count == 2:
+        vis.add_geometry(point_cloud)
+
+    vis.update_geometry(point_cloud)
+
+    vis.poll_events()
+    vis.update_renderer()
+    # # This can fix Open3D jittering issues:
+    time.sleep(0.001)
 
 def o3d_camera_lidar_fusion(objects,
                             yolo_bbx,

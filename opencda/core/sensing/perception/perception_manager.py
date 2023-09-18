@@ -14,6 +14,7 @@ import carla
 import cv2
 import numpy as np
 import open3d as o3d
+import matplotlib.pyplot as plt
 
 import opencda.core.sensing.perception.sensor_transformation as st
 from opencda.core.common.misc import \
@@ -23,7 +24,7 @@ from opencda.core.sensing.perception.obstacle_vehicle import \
 from opencda.core.sensing.perception.static_obstacle import TrafficLight
 from opencda.core.sensing.perception.o3d_lidar_libs import \
     o3d_visualizer_init, o3d_pointcloud_encode, o3d_visualizer_show, \
-    o3d_camera_lidar_fusion
+    o3d_camera_lidar_fusion, o3d_visualizer_show_lidar_only
 
 
 class CameraSensor:
@@ -487,23 +488,52 @@ class PerceptionManager:
             self.search_nearby_cav()
             objects = self.deactivate_mode(objects) # maybe 当不检测的时候通过v2x来查到周围的车的位置来作为障碍物的位置
         else:
-            objects = self.activate_mode(objects)
+            rgbs = self.search_nearby_cav()    # 通过v2x来查到周围的的车的雷达或者rgb数据
+            
+            # if len(rgbs) > 0:
+            #     # 可视化ego车的rgb数据
+            #     rgb_image = cv2.resize(self.rgb_camera[0].image, (0, 0), fx=0.4, fy=0.4)
+            #     cv2.imshow('the image of ego cars', rgb_image)
+            #     cv2.waitKey(1)
 
-        self.count += 1
+            objects = self.activate_mode(objects,rgbs)
+
+            # TODO: 使用多车的lidar数据来检测障碍物
+            # objects = self.activate_mode_lidar(objects,rgbs)
+
+        self.count += 1 # 仿真的步数
 
         return objects
 
     def search_nearby_cav(self):
         if self.v2x_manager is not None:
+            rgbs = []
             print(f"nearby cav nearby {self.v2x_manager.cav_nearby}")
             for  _, vm in self.v2x_manager.cav_nearby.items():
                 lidar = vm.v2x_manager.get_ego_lidar()
-                print(f"lidar {lidar}")
-        pass
+                print(f"有它车的lidar数据啦! {lidar}")
+                
+                # o3d_pointcloud_encode(lidar.data, lidar.o3d_pointcloud)
+                # o3d_visualizer_show_lidar_only(
+                #     self.o3d_vis,
+                #     self.count,
+                #     lidar.o3d_pointcloud)
 
-    def activate_mode(self, objects):
+                # rgb = vm.v2x_manager.get_ego_rgb_image()
+                # print(f"有它车的rgb数据啦! {rgb}")
+
+                # # 可视化nearby车的rgb数据
+                # rgb_image = cv2.resize(rgb[0].image, (0, 0), fx=0.4, fy=0.4)
+                # cv2.imshow('the image of nearby cars', rgb_image)
+                # cv2.waitKey(1)
+
+                # rgbs.append(rgb[0])
+            return rgbs
+        pass
+    
+    def activate_mode_lidar(self, objects,rgbs):
         """
-        Use Yolov5 + Lidar fusion to detect objects.
+        Use Lidar fusion to detect objects.
 
         Parameters
         ----------
@@ -527,7 +557,13 @@ class PerceptionManager:
                     np.array(
                         rgb_camera.image),
                     cv2.COLOR_BGR2RGB))
-
+        # # 将周围的车的rgb数据加入到rgb_images中
+        # for rgb_v2xs in rgbs:
+        #     for rgb_v2x in rgb_v2xs:
+        #         while rgb_v2x.image is None:
+        #             continue
+        #         rgb_images.append(cv2.cvtColor(np.array(rgb_v2x.image),cv2.COLOR_BGR2RGB))
+                
         # yolo detection
         yolo_detection = self.ml_manager.object_detector(rgb_images)
         # rgb_images for drawing
@@ -553,6 +589,68 @@ class PerceptionManager:
             # directly.
             self.speed_retrieve(objects)
 
+        self.objects = objects
+        print("第",self.count,"轮,",self.id,"号车检测到了",len(objects['vehicles']),"个车辆啦！")
+        return objects
+    
+    def activate_mode(self, objects,rgbs):
+        """
+        Use Yolov5 + Lidar fusion to detect objects.
+
+        Parameters
+        ----------
+        objects : dict
+            The dictionary that contains all category of detected objects.
+            The key is the object category name and value is its 3d coordinates
+            and confidence.
+
+        Returns
+        -------
+         objects: dict
+            Updated object dictionary.
+        """
+        # retrieve current cameras and lidar data
+        rgb_images = []
+        for rgb_camera in self.rgb_camera:
+            while rgb_camera.image is None:
+                continue
+            rgb_images.append(
+                cv2.cvtColor(
+                    np.array(
+                        rgb_camera.image),
+                    cv2.COLOR_BGR2RGB))
+        # # 将周围的车的rgb数据加入到rgb_images中
+        # for rgb_v2xs in rgbs:
+        #     for rgb_v2x in rgb_v2xs:
+        #         while rgb_v2x.image is None:
+        #             continue
+        #         rgb_images.append(cv2.cvtColor(np.array(rgb_v2x.image),cv2.COLOR_BGR2RGB))
+                
+        # yolo detection
+        yolo_detection = self.ml_manager.object_detector(rgb_images)
+        # rgb_images for drawing
+        rgb_draw_images = []
+
+        for (i, rgb_camera) in enumerate(self.rgb_camera):
+            # lidar projection
+            rgb_image, projected_lidar = st.project_lidar_to_camera(
+                self.lidar.sensor,
+                rgb_camera.sensor, self.lidar.data, np.array(
+                    rgb_camera.image))
+            rgb_draw_images.append(rgb_image)
+
+            # camera lidar fusion
+            objects = o3d_camera_lidar_fusion(
+                objects,
+                yolo_detection.xyxy[i],
+                self.lidar.data,
+                projected_lidar,
+                self.lidar.sensor)
+
+            # calculate the speed. current we retrieve from the server
+            # directly.
+            self.speed_retrieve(objects)    # 在这里添加了障碍物的ID和速度信息
+
         if self.camera_visualize:
             names = ['front', 'right', 'left', 'back']
             for (i, rgb_image) in enumerate(rgb_draw_images):
@@ -575,8 +673,8 @@ class PerceptionManager:
                 self.count,
                 self.lidar.o3d_pointcloud,
                 objects)
-        # add traffic light
-        objects = self.retrieve_traffic_lights(objects)
+        # # add traffic light
+        # objects = self.retrieve_traffic_lights(objects)
         self.objects = objects
         print("第",self.count,"轮,",self.id,"号车检测到了",len(objects['vehicles']),"个车辆啦！")
         return objects
@@ -775,7 +873,7 @@ class PerceptionManager:
                 obstacle_loc = obstacle_vehicle.get_location()
                 if abs(loc.x - obstacle_loc.x) <= 3.0 and \
                         abs(loc.y - obstacle_loc.y) <= 3.0:
-                    obstacle_vehicle.set_velocity(v.get_velocity())
+                    obstacle_vehicle.set_velocity(v.get_velocity()) # 将障碍物的速度信息添加到obstacle_vehicle中
 
                     # the case where the obstacle vehicle is controled by
                     # sumo
@@ -788,7 +886,7 @@ class PerceptionManager:
                             speed_vector = carla.Vector3D(sumo_speed, 0, 0)
                             obstacle_vehicle.set_velocity(speed_vector)
 
-                    obstacle_vehicle.set_carla_id(v.id)
+                    obstacle_vehicle.set_carla_id(v.id) # 将障碍物的ID添加到obstacle_vehicle中
 
     def retrieve_traffic_lights(self, objects):
         """

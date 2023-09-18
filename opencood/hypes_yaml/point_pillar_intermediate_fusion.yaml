@@ -1,0 +1,113 @@
+name: point_pillar_intermediate_fusion
+root_dir: "opv2v_data_dumping/train"    #训练集目录
+validate_dir: "opv2v_data_dumping/validate" #在训练时被定义为验证文件夹，测试的时候，被定义为测试文件夹
+
+yaml_parser: "load_point_pillar_params"   #针对不同的主干网络加载不同的参数
+train_params:                   #训练的普通参数
+  batch_size: &batch_size 2     #batch_size ：表示单次传递给程序用以训练的数据（样本）个数。 影响模型的优化程度和速度。
+  epoches: 15  #epoch数是一个超参数，它定义了学习算法在整个训练数据集中的工作次数。
+  eval_freq: 1 
+  save_freq: 1
+
+# wild_setting: # setting related to noise
+#   async: true
+#   async_mode: 'real'
+#   async_overhead: 100
+#   backbone_delay: 10
+#   data_size: 1.06
+#   loc_err: true
+#   xyz_std: 100
+#   ryp_std: 100
+#   seed: 25
+#   transmission_speed: 27
+
+
+fusion:
+  core_method: 'IntermediateFusionDataset' # LateFusionDataset, EarlyFusionDataset, IntermediateFusionDataset supported
+  args: []
+
+# preprocess-related
+preprocess:
+  # options: BasePreprocessor, VoxelPreprocessor, BevPreprocessor
+  core_method: 'SpVoxelPreprocessor'
+  args:
+    voxel_size: &voxel_size [0.4, 0.4, 4]  #对于pointpillar的体素分辨率
+    max_points_per_voxel: 32  #每个体素中允许的最大点数
+    max_voxel_train: 32000    #训练时允许的最大体素数
+    max_voxel_test: 70000     #测试时允许的最大体素数，还大一些
+  # lidar range for each individual cav.    点云剪裁范围
+  cav_lidar_range: &cav_lidar [-140.8, -40, -3, 140.8, 40, 1]
+
+data_augment:   #数据增强选项
+  - NAME: random_world_flip
+    ALONG_AXIS_LIST: [ 'x' ]
+
+  - NAME: random_world_rotation
+    WORLD_ROT_ANGLE: [ -0.78539816, 0.78539816 ]
+
+  - NAME: random_world_scaling
+    WORLD_SCALE_RANGE: [ 0.95, 1.05 ]
+
+# anchor box related
+postprocess:
+  core_method: 'VoxelPostprocessor' # VoxelPostprocessor, BevPostprocessor supported
+  anchor_args:  #anchor生成器参数
+    cav_lidar_range: *cav_lidar   #该参数与激光雷达裁剪范围一致，以产生正确的anchor
+    l: 3.9
+    w: 1.6
+    h: 1.56
+    r: [0, 90]
+    feature_stride: 2  #与输入体素张量相比，特征图缩小了两倍
+    num: &achor_num 2  #对于特征图中的每个位置，将生成2个anchor
+  target_args:  #用于生成用于物体检测的阳性和阴性样本
+    pos_threshold: 0.6
+    neg_threshold: 0.45
+    score_threshold: 0.20
+  order: 'hwl' # hwl or lwh
+  max_num: 100 # maximum number of objects in a single frame. use this number to make sure different frames has the same dimension in the same batch
+  nms_thresh: 0.15
+
+# model related
+model:
+  core_method: point_pillar_intermediate   #训练器将以相同的名称加载相应的模型Python文件
+  args:     #pointpillar 模型的详细参数
+    voxel_size: *voxel_size
+    lidar_range: *cav_lidar
+    anchor_number: *achor_num
+
+    pillar_vfe:
+      use_norm: true
+      with_distance: false
+      use_absolute_xyz: true
+      num_filters: [64]
+    point_pillar_scatter:
+      num_features: 64
+
+    base_bev_backbone:
+      layer_nums: [3, 5, 8]  # blocks层  3个尺度的层
+      layer_strides: [2, 2, 2] # 层间的stride
+      num_filters: [64, 128, 256]
+      upsample_strides: [1, 2, 4]
+      num_upsample_filter: [128, 128, 128] # 每一层concat时候的维数，上采样到128
+      compression: 0
+
+    anchor_num: *achor_num
+
+loss:
+  core_method: point_pillar_loss  #加载相应的loss文件
+  args:
+    cls_weight: 1.0
+    reg: 2.0
+
+optimizer:
+  core_method: Adam
+  lr: 0.002
+  args:
+    eps: 1e-10
+    weight_decay: 1e-4
+
+lr_scheduler:
+  core_method: multistep #step, multistep and Exponential support
+  gamma: 0.1
+  step_size: [10, 15]
+

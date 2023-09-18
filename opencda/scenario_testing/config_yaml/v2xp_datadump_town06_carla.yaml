@@ -29,11 +29,11 @@ blueprint:
   bp_meta_path: "opencda/assets/blueprint_meta/bbx_stats_0912.json" # Define the path for loading the blueprint metadata for defining the class of each blueprint
   # Define blueprint type sample probabilities
   bp_class_sample_prob:
-    car: 0.5
-    truck: 0.1
-    bus: 0.1
-    bicycle: 0.1
-    motorcycle: 0.1
+    car: 1
+    truck: 0
+    bus: 0
+    bicycle: 0
+    motorcycle: 0
 
 # Define the basic parameters of the rsu
 rsu_base: &rsu_base
@@ -67,9 +67,9 @@ vehicle_base: &vehicle_base
   sensing: &base_sensing
     perception: &base_perception
       activate: true # when not activated, objects positions will be retrieved from server directly
-      camera_visualize: 1 # how many camera images need to be visualized. 0 means no visualization for camera
+      camera_visualize: 0 # how many camera images need to be visualized. 0 means no visualization for camera
       camera_num: 4 # how many cameras are mounted on the vehicle. Maximum 3(frontal, left and right cameras)
-      lidar_visualize: true # whether to visualize lidar points using open3d
+      lidar_visualize: false # whether to visualize lidar points using open3d
       lidar: # lidar sensor configuration, check CARLA sensor reference for more details
         channels: 32
         range: 120
@@ -138,7 +138,7 @@ vehicle_base: &vehicle_base
       max_steering: 0.3
   v2x: &base_v2x # communication related
     enabled: true
-    communication_range: 35
+    communication_range: 90
     loc_noise: 0.0
     yaw_noise: 0.0
     speed_noise: 0.0
@@ -154,7 +154,7 @@ carla_traffic_manager:
   global_speed_perc: -10
   set_osm_mode: true # Enables or disables the OSM mode.
   auto_lane_change: true
-  random: true # whether to random select vehicles' color and model
+  random: false # whether to random select vehicles' color and model
   ignore_lights_percentage: 100 # whether set the traffic ignore traffic lights
   vehicle_list: ~  # a number or a list
   # Used only when vehicle_list is a number.
@@ -172,8 +172,8 @@ scenario:
 
   single_cav_list:  # CAVs 
     - <<: *vehicle_base # 第一个车的定义
-      spawn_position: [12.00, 192.31, 0.3, 0, -90, 0]
-      destination: [67.12, 150.2, 1.0]  # destination of the vehicle
+      spawn_position: [12.00, 192.31, 0.3, 0, -90, 0] # 设置起点
+      destination: [67.12, 150.2, 1.0]                # 设置终点
       v2x:
         <<: *base_v2x
         communication_range: 90
