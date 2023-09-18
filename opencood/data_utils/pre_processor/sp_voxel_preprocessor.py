@@ -166,9 +166,7 @@ class SpVoxelPreprocessor(BasePreprocessor):
         voxel_coords = []
 
         for i in range(len(coords)):
-            voxel_coords.append(
-                np.pad(coords[i], ((0, 0), (1, 0)),
-                       mode='constant', constant_values=i))
+            voxel_coords.append(np.pad(coords[i], ((0, 0), (1, 0)),mode='constant', constant_values=i))
         voxel_coords = torch.from_numpy(np.concatenate(voxel_coords))
 
         return {'voxel_features': voxel_features,

@@ -465,7 +465,6 @@ class PerceptionManager:
             The distance between ego and the target actor.
         """
         return a.get_location().distance(self.ego_pos.location)
-
     def detect(self,opt,ego_pos):
         """
         Detect surrounding objects. Currently only vehicle detection supported.
