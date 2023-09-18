@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from opencda.core.sensing.perception.perception_manager import PerceptionManager
 from opencda.core.sensing.perception.obstacle_vehicle import ObstacleVehicle
 from opencda.core.sensing.perception.static_obstacle import TrafficLight

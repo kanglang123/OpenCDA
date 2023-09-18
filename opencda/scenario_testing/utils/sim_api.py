@@ -267,7 +267,7 @@ class ScenarioManager:
         )
         return weather
 
-    def create_vehicle_manager(self, application,
+    def create_vehicle_manager(self,opt,application,
                                map_helper=None,
                                data_dump=False):
         """
@@ -322,7 +322,7 @@ class ScenarioManager:
             vehicle = self.world.spawn_actor(cav_vehicle_bp, spawn_transform)
 
             # create vehicle manager for each cav
-            vehicle_manager = VehicleManager(
+            vehicle_manager = VehicleManager(opt,
                 vehicle, cav_config, application,
                 self.carla_map, self.cav_world,
                 current_time=self.scenario_params['current_time'],
@@ -335,7 +335,7 @@ class ScenarioManager:
             destination = carla.Location(x=cav_config['destination'][0],
                                          y=cav_config['destination'][1],
                                          z=cav_config['destination'][2])
-            vehicle_manager.update_info()
+            vehicle_manager.update_info(opt)
             vehicle_manager.set_destination(
                 vehicle_manager.vehicle.get_location(),
                 destination,

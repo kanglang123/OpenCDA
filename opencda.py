@@ -30,6 +30,22 @@ def arg_parse():
     parser.add_argument('-v', "--version", type=str, default='0.9.11',
                         help='Specify the CARLA simulator version, default'
                              'is 0.9.11, 0.9.12 is also supported.')
+    
+    parser.add_argument('--model_dir', type=str, required=True,
+                        help='Continued training path')
+    parser.add_argument('--fusion_method', required=True, type=str,
+                        default='late',
+                        help='late, early or intermediate')
+    parser.add_argument('--show_vis', action='store_true',
+                        help='whether to show image visualization result')
+    parser.add_argument('--show_sequence', action='store_true',
+                        help='whether to show video visualization result.'
+                             'it can note be set true with show_vis together ')
+    parser.add_argument('--save_vis', action='store_true',
+                        help='whether to save visualization result')
+    parser.add_argument('--save_npy', action='store_true',
+                        help='whether to save prediction and gt result'
+                             'in npy_test file')
 
     opt = parser.parse_args()
     return opt

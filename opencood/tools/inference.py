@@ -41,8 +41,8 @@ def test_parser():
     return opt
 
 
-def main():
-    opt = test_parser()
+def inference_code(opt,objects,lidar_data):
+    # opt = test_parser()
     assert opt.fusion_method in ['late', 'early', 'intermediate']
     assert not (opt.show_vis and opt.show_sequence), 'you can only visualize ' \
                                                     'the results in single ' \

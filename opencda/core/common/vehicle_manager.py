@@ -73,7 +73,7 @@ class VehicleManager(object):
     """
 
     def __init__(
-            self,
+            self,opt,
             vehicle,
             config_yaml,
             application,
@@ -122,7 +122,7 @@ class VehicleManager(object):
         self.controller = ControlManager(control_config)
 
         # perception module
-        self.perception_manager = PerceptionManager(
+        self.perception_manager = PerceptionManager(opt,
             self.v2x_manager, vehicle, sensing_config['perception'],
             cav_world, data_dumping)
 
@@ -165,7 +165,7 @@ class VehicleManager(object):
         self.agent.set_destination(
             start_location, end_location, clean, end_reset)
 
-    def update_info(self):
+    def update_info(self,opt):
         """
         Call perception and localization module to
         retrieve surrounding info an ego position.
@@ -179,7 +179,7 @@ class VehicleManager(object):
         ego_image = self.perception_manager.rgb_camera
 
         # object detection
-        objects = self.perception_manager.detect(ego_pos)
+        objects = self.perception_manager.detect(opt,ego_pos)
 
         # update the ego pose for map manager
         self.map_manager.update_information(ego_pos)

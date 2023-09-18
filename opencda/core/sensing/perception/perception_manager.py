@@ -25,7 +25,7 @@ from opencda.core.sensing.perception.static_obstacle import TrafficLight
 from opencda.core.sensing.perception.o3d_lidar_libs import \
     o3d_visualizer_init, o3d_pointcloud_encode, o3d_visualizer_show, \
     o3d_camera_lidar_fusion, o3d_visualizer_show_lidar_only
-
+from opencood.tools.inference import inference_code
 
 class CameraSensor:
     """
@@ -375,8 +375,9 @@ class PerceptionManager:
         Open3d point cloud visualizer.
     """
 
-    def __init__(self, v2x_manager, vehicle, config_yaml, cav_world,
+    def __init__(self, opt,v2x_manager, vehicle, config_yaml, cav_world,
                  data_dump=False, carla_world=None, infra_id=None):
+        self.opt = opt
         self.vehicle = vehicle
         self.carla_world = carla_world if carla_world is not None \
             else self.vehicle.get_world()
@@ -465,7 +466,7 @@ class PerceptionManager:
         """
         return a.get_location().distance(self.ego_pos.location)
 
-    def detect(self, ego_pos):
+    def detect(self,opt,ego_pos):
         """
         Detect surrounding objects. Currently only vehicle detection supported.
 
@@ -496,11 +497,11 @@ class PerceptionManager:
             #     cv2.imshow('the image of ego cars', rgb_image)
             #     cv2.waitKey(1)
 
-            objects = self.activate_mode(objects,rgbs)
+            # objects = self.activate_mode(objects,rgbs)
 
             # TODO: 使用多车的lidar数据来检测障碍物
             # objects = self.activate_mode_lidar(objects,rgbs)
-
+            objects = inference_code(opt,objects,self.lidar.data)
         self.count += 1 # 仿真的步数
 
         return objects

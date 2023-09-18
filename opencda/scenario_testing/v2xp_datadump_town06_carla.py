@@ -34,7 +34,7 @@ def run_scenario(opt, config_yaml):
             scenario_manager.client. \
                 start_recorder("single_town06_carla.log", True)
         # 创建感知车
-        single_cav_list = scenario_manager.create_vehicle_manager(application=['single'],data_dump=False)
+        single_cav_list = scenario_manager.create_vehicle_manager(opt,application=['single'],data_dump=False)
         scenario_manager.tick()     # 更新场景
         
         # 创建RSU
