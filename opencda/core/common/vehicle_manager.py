@@ -126,7 +126,7 @@ class VehicleManager(object):
             self.v2x_manager, vehicle, sensing_config['perception'],
             cav_world, data_dumping)
 
-        if data_dumping:
+        if data_dumping:    # 数据收集
             self.data_dumper = DataDumper(self.perception_manager,
                                           vehicle.id,
                                           save_time=current_time)
@@ -167,8 +167,7 @@ class VehicleManager(object):
 
     def update_info(self,opt):
         """
-        Call perception and localization module to
-        retrieve surrounding info an ego position.
+        Call perception and localization module to retrieve surrounding info an ego position.
         """
         # localization
         self.localizer.localize()
@@ -184,8 +183,7 @@ class VehicleManager(object):
         # update the ego pose for map manager
         self.map_manager.update_information(ego_pos)
 
-        # update ego position and speed to v2x manager,
-        # and then v2x manager will search the nearby cavs
+        # update ego position and speed to v2x manager,and then v2x manager will search the nearby cavs
         self.v2x_manager.update_info(ego_pos, ego_spd, ego_lidar, ego_image)
 
         self.agent.update_information(ego_pos, ego_spd, objects)

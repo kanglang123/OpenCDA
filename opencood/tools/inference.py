@@ -38,7 +38,7 @@ def inference_code(opt,objects,lidar_data):
     model = train_utils.create_model(hypes)
     # we assume gpu is necessary
     if torch.cuda.is_available():
-        model.cuda()
+        model.cuda()    
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     print('Loading Model from checkpoint')
@@ -51,10 +51,26 @@ def inference_code(opt,objects,lidar_data):
         processed_lidar = opencood_dataset.pre_processor.preprocess(lidar_data)   # 前处理
         processed_lidar['voxel_coords'] = np.pad(processed_lidar['voxel_coords'], ((0, 0), (1, 0)),mode='constant', constant_values=0)
         processed_lidar_tensor = {k: torch.from_numpy(v) for k, v in processed_lidar.items()}
-        
         processed_lidar_tensor = train_utils.to_device(processed_lidar_tensor, device)
-        output_dict = model(processed_lidar_tensor)
-        a = 1
+
+        output_dict = model(processed_lidar_tensor) # 模型推理
+
+        anchor_box = opencood_dataset.post_processor.generate_anchor_box()
+        anchor_box_tensor = torch.from_numpy(anchor_box)  
+        anchor_box_tensor = train_utils.to_device(anchor_box_tensor, device)
+
+        # 包装车的信息(多级字典)
+        cars_data = { 'ego':{'processed_lidar': processed_lidar_tensor,
+                             'anchor_box': anchor_box_tensor,
+                             'transformation_matrix': train_utils.to_device(torch.from_numpy(np.identity(4,dtype=np.float32)), device),
+                             # 'record_len': record_len,
+                             # 'plan_trajectory':plan_trajectory}
+                            }
+                    }
+        pred_box_tensor, pred_score = opencood_dataset.post_processor.post_process(cars_data, output_dict)
+        objects = {'pred_box_tensor':pred_box_tensor, 
+                   'pred_score':pred_score}
+        return objects
     else:
         for i, batch_data in tqdm(enumerate(data_loader)):
             # print(i)

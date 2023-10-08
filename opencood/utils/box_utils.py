@@ -293,11 +293,9 @@ def project_box3d(box3d, transformation_matrix):
     torch_ones = torch.ones((box3d_corner.shape[0], 1, 8))
     torch_ones = torch_ones.to(box3d_corner.device)
     # (N, 4, 8)
-    box3d_corner = torch.cat((box3d_corner, torch_ones),
-                             dim=1)
+    box3d_corner = torch.cat((box3d_corner, torch_ones),dim=1)
     # (N, 4, 8)
-    projected_box3d = torch.matmul(transformation_matrix,
-                                   box3d_corner)
+    projected_box3d = torch.matmul(transformation_matrix,box3d_corner)
     # (N, 8, 3)
     projected_box3d = projected_box3d[:, :3, :].transpose(1, 2)
 

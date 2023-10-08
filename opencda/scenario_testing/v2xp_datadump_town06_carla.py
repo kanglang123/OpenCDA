@@ -38,27 +38,25 @@ def run_scenario(opt, config_yaml):
         scenario_manager.tick()     # 更新场景
         
         # 创建RSU
-        # rsu_list = \
-        #     scenario_manager.create_rsu_manager(data_dump=True)
+        # rsu_list = scenario_manager.create_rsu_manager(data_dump=True)
 
-        # create background traffic in carla 创建交通流和背景车辆
+        # 创建交通流和背景车辆 create background traffic in carla 
         traffic_manager, bg_veh_list = scenario_manager.create_traffic_carla()
         scenario_manager.tick()     # 更新场景
 
-        # create evaluation manager 创建评估管理器
-        eval_manager = \
-            EvaluationManager(scenario_manager.cav_world,
+        # 创建评估管理器 create evaluation manager 
+        eval_manager = EvaluationManager(scenario_manager.cav_world,
                               script_name='coop_town06',
                               current_time=scenario_params['current_time'])
 
         spectator = scenario_manager.world.get_spectator()
 
-        # save the data collection protocol to the folder 创建数据收集协议
-        current_path = os.path.dirname(os.path.realpath(__file__))
-        save_yaml_name = os.path.join(current_path,
-                                      '../../data_dumping',
-                                      scenario_params['current_time'],
-                                      'data_protocol.yaml')
+        # 创建数据收集协议 save the data collection protocol to the folder 
+        # current_path = os.path.dirname(os.path.realpath(__file__))
+        # save_yaml_name = os.path.join(current_path,
+        #                               '../../data_dumping',
+        #                               scenario_params['current_time'],
+        #                               'data_protocol.yaml')
         # save_yaml(scenario_params, save_yaml_name)
 
         while True:
@@ -75,7 +73,8 @@ def run_scenario(opt, config_yaml):
             scenario_manager.tick()     # 更新场景
 
             for i, single_cav in enumerate(single_cav_list):
-                single_cav.update_info()
+                single_cav.update_info(opt)
+                
                 control = single_cav.run_step()
                 single_cav.vehicle.apply_control(control)
 
@@ -95,5 +94,5 @@ def run_scenario(opt, config_yaml):
             v.destroy()
         # for r in rsu_list:
         #     r.destroy()
-        for v in bg_veh_list:
-            v.destroy()
+        for bg_v in bg_veh_list:
+            bg_v.destroy()

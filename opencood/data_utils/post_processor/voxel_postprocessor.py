@@ -260,7 +260,7 @@ class VoxelPostprocessor(BasePostprocessor):
         pred_box2d_list = []
 
         for cav_id, cav_content in data_dict.items():
-            assert cav_id in output_dict
+            # assert cav_id in output_dict
             # the transformation matrix to ego space
             transformation_matrix = cav_content['transformation_matrix']
 
@@ -268,12 +268,12 @@ class VoxelPostprocessor(BasePostprocessor):
             anchor_box = cav_content['anchor_box']
 
             # classification probability
-            prob = output_dict[cav_id]['psm']
+            prob = output_dict['psm']
             prob = F.sigmoid(prob.permute(0, 2, 3, 1))
             prob = prob.reshape(1, -1)
 
             # regression map
-            reg = output_dict[cav_id]['rm']
+            reg = output_dict['rm']
 
             # convert regression map back to bounding box
             # (N, W*L*anchor_num, 7)

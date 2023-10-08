@@ -488,25 +488,28 @@ class PerceptionManager:
             self.search_nearby_cav()
             objects = self.deactivate_mode(objects) # maybe 当不检测的时候通过v2x来查到周围的车的位置来作为障碍物的位置
         else:
-            rgbs = self.search_nearby_cav()    # 通过v2x来查到周围的的车的雷达或者rgb数据
+
+            rgbs,lidars = self.search_nearby_cav()    # 通过v2x来查到周围的的车的雷达或者rgb数据
             
             # if len(rgbs) > 0:
             #     # 可视化ego车的rgb数据
             #     rgb_image = cv2.resize(self.rgb_camera[0].image, (0, 0), fx=0.4, fy=0.4)
             #     cv2.imshow('the image of ego cars', rgb_image)
             #     cv2.waitKey(1)
-
-            # objects = self.activate_mode(objects,rgbs)
-
-            # TODO: 使用多车的lidar数据来检测障碍物
-            # objects = self.activate_mode_lidar(objects,rgbs)
-            objects = inference_code(opt,objects,self.lidar.data)
+            
+            if len(rgbs) == 0: # 因为第一轮没有周围车的数据，所以要跳过
+                objects = self.deactivate_mode(objects)
+            else:
+                # TODO: 使用多车的lidar数据来检测障碍物
+                # objects = self.activate_mode_lidar(objects,rgbs)
+                objects = inference_code(opt,objects,self.lidar.data) # 可以改成列表lidars 
         self.count += 1 # 仿真的步数
 
         return objects
 
     def search_nearby_cav(self):
         if self.v2x_manager is not None:
+            lidars = []
             rgbs = []
             print(f"nearby cav nearby {self.v2x_manager.cav_nearby}")
             for  _, vm in self.v2x_manager.cav_nearby.items():
@@ -518,17 +521,17 @@ class PerceptionManager:
                 #     self.o3d_vis,
                 #     self.count,
                 #     lidar.o3d_pointcloud)
+                lidars.append(lidar)
 
-                # rgb = vm.v2x_manager.get_ego_rgb_image()
-                # print(f"有它车的rgb数据啦! {rgb}")
+                rgb = vm.v2x_manager.get_ego_rgb_image()    # 这里的rgb是一个list，里面有四个相机的数据
+                print(f"有它车的rgb数据啦! {rgb}")
 
                 # # 可视化nearby车的rgb数据
                 # rgb_image = cv2.resize(rgb[0].image, (0, 0), fx=0.4, fy=0.4)
                 # cv2.imshow('the image of nearby cars', rgb_image)
                 # cv2.waitKey(1)
-
-                # rgbs.append(rgb[0])
-            return rgbs
+                rgbs.append(rgb[0])
+            return rgbs,lidars
         pass
     
     def activate_mode_lidar(self, objects,rgbs):
@@ -552,29 +555,21 @@ class PerceptionManager:
         for rgb_camera in self.rgb_camera:
             while rgb_camera.image is None:
                 continue
-            rgb_images.append(
-                cv2.cvtColor(
-                    np.array(
-                        rgb_camera.image),
-                    cv2.COLOR_BGR2RGB))
-        # # 将周围的车的rgb数据加入到rgb_images中
-        # for rgb_v2xs in rgbs:
-        #     for rgb_v2x in rgb_v2xs:
-        #         while rgb_v2x.image is None:
-        #             continue
-        #         rgb_images.append(cv2.cvtColor(np.array(rgb_v2x.image),cv2.COLOR_BGR2RGB))
-                
-        # yolo detection
+            rgb_images.append(cv2.cvtColor(np.array(rgb_camera.image),cv2.COLOR_BGR2RGB))
+        # 将周围的车的rgb数据加入到rgb_images中
+        for rgb_v2xs in rgbs:
+            for rgb_v2x in rgb_v2xs:
+                while rgb_v2x.image is None:
+                    continue
+                rgb_images.append(cv2.cvtColor(np.array(rgb_v2x.image),cv2.COLOR_BGR2RGB))
+    
         yolo_detection = self.ml_manager.object_detector(rgb_images)
         # rgb_images for drawing
         rgb_draw_images = []
 
         for (i, rgb_camera) in enumerate(self.rgb_camera):
             # lidar projection
-            rgb_image, projected_lidar = st.project_lidar_to_camera(
-                self.lidar.sensor,
-                rgb_camera.sensor, self.lidar.data, np.array(
-                    rgb_camera.image))
+            rgb_image, projected_lidar = st.project_lidar_to_camera(self.lidar.sensor,rgb_camera.sensor, self.lidar.data, np.array(rgb_camera.image))
             rgb_draw_images.append(rgb_image)
 
             # camera lidar fusion
@@ -585,8 +580,7 @@ class PerceptionManager:
                 projected_lidar,
                 self.lidar.sensor)
 
-            # calculate the speed. current we retrieve from the server
-            # directly.
+            # calculate the speed. current we retrieve from the server directly.
             self.speed_retrieve(objects)
 
         self.objects = objects
