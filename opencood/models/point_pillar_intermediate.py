@@ -43,13 +43,13 @@ class PointPillarIntermediate(nn.Module):
         voxel_features = data_dict['voxel_features']
         voxel_coords = data_dict['voxel_coords']
         voxel_num_points = data_dict['voxel_num_points']
-        # record_len = data_dict['record_len']
+        record_len = data_dict['record_len']
         # plan_trajectory = data_dict['plan_trajectory']
 
         batch_dict = {'voxel_features': voxel_features,
                       'voxel_coords': voxel_coords,
                       'voxel_num_points': voxel_num_points,
-                      'record_len': torch.tensor([1], device='cuda'),
+                      'record_len': record_len,
                     #   'plan_trajectory':plan_trajectory
                         }
         # # feature_map 自注意力之后的可视化

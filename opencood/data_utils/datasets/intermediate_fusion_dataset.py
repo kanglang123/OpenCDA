@@ -12,18 +12,18 @@ from collections import OrderedDict
 
 import numpy as np
 import torch
-
+import time
 import opencood.data_utils.datasets
 import opencood.data_utils.post_processor as post_processor
 from opencood.utils import box_utils
-from opencood.data_utils.datasets import basedataset
+from opencood.data_utils.datasets import basedataset,plot_lidar_point
 from opencood.data_utils.pre_processor import build_preprocessor
 from opencood.utils.pcd_utils import \
     mask_points_by_range, mask_ego_points, shuffle_points, \
     downsample_lidar_minimum,mask_points_by_plan_trajectory
 from opencood.utils.transformation_utils import x1_to_x2
-
-
+import matplotlib.pyplot as plt
+import matplotlib
 class IntermediateFusionDataset(basedataset.BaseDataset):
     """
     This class is for intermediate fusion where each vehicle transmit the
@@ -229,7 +229,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
                     projected_lidar_stack)})
         return processed_data_dict
 
-    def get_item_single_car(self, selected_cav_base, ego_pose,ego_tarj):
+    def get_item_single_car(self, selected_cav_base):
         """
         Project the lidar and bbx to ego space first, and then do clipping.
 
@@ -237,8 +237,6 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         ----------
         selected_cav_base : dict
             The dictionary contains a single CAV's raw information.
-        ego_pose : list
-            The ego vehicle lidar pose under world coordinate.
 
         Returns
         -------
@@ -248,79 +246,30 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         selected_cav_processed = {}
 
         # calculate the transformation matrix
-        transformation_matrix = \
-            selected_cav_base['params']['transformation_matrix']
-
-        # retrieve objects under ego coordinates
-        object_bbx_center, object_bbx_mask, object_ids = \
-            self.post_processor.generate_object_center([selected_cav_base],
-                                                       ego_pose)
+        transformation_matrix = selected_cav_base['transformation_matrix']
 
         # filter lidar
-        lidar_np = selected_cav_base['lidar_np']
+        lidar_np = selected_cav_base['lidar'].data
         lidar_np = shuffle_points(lidar_np)
+        # plot_lidar_point.plot_3d_point_cloud(lidar_np)
         # remove points that hit itself
         lidar_np = mask_ego_points(lidar_np)
+        # plot_lidar_point.plot_3d_point_cloud(lidar_np)
+
+        # clipping    ！！这里有问题
+        lidar_np = mask_points_by_range(lidar_np,self.params['preprocess']['cav_lidar_range'])
+        # plot_lidar_point.plot_3d_point_cloud(lidar_np)
+
         # project the lidar to ego space
         if self.proj_first:
-            a = lidar_np[:, :3]
-            lidar_np[:, :3] = \
-                box_utils.project_points_by_matrix_torch(lidar_np[:, :3],
-                                                         transformation_matrix)
-            
-            # project the plan_trajectory to ego space
-            plan_trajectory_list = np.array(selected_cav_base['params']['plan_trajectory'])
-            if len(plan_trajectory_list) > 0 :
-                # 将轨迹转换到ego坐标系下
-                plan_trajectory_list = box_utils.project_points_by_matrix_torch(plan_trajectory_list,x1_to_x2([0,0,0,0,0,0],ego_pose))
-                plan_trajectory_list = box_utils.project_points_by_matrix_torch(plan_trajectory_list,x1_to_x2([0,0,0,0,0,180],[0,0,0,0,0,0]))
-                # 高度维度统一置为0
-                for i in range(len(plan_trajectory_list)): 
-                    plan_trajectory_list[i,2] = 0 
-            plan_trajectory = torch.from_numpy(plan_trajectory_list)
-            
-            # project the plan_trajectory to ego space
-            ego_tarj = np.array(ego_tarj)
-            if len(ego_tarj) > 0 :
-                # print('轨迹长度:', len(ego_tarj))
-                ego_tarj = box_utils.project_points_by_matrix_torch(ego_tarj,x1_to_x2([0,0,0,0,0,0],ego_pose))
-                # ego_tarj = box_utils.project_points_by_matrix_torch(ego_tarj,x1_to_x2([0,0,0,0,0,180],[0,0,0,0,0,0]))
-                # 高度维度统一置为0
-                for i in range(len(ego_tarj)): 
-                    ego_tarj[i,2] = 0 
-            # else:
-            #     print('###### 轨迹长度等于0!')
-
-        # clipping                                                
-        lidar_np = mask_points_by_range(lidar_np,self.params['preprocess']['cav_lidar_range'])
-        # change here ！！！ please 
-
-        # 每个轨迹点画出一个圈，然后取并集
-        # lidar_np = mask_points_by_plan_trajectory(lidar_np,ego_tarj,self.params['preprocess']['cav_lidar_range'])
-
-        # 根据计划的轨迹来mask掉点云中的点  
-        if len(ego_tarj) > 1 :
-            mask_map = mask_points_by_plan_trajectory(lidar_np,ego_tarj,self.params['preprocess']['cav_lidar_range'])
-        else:
-            # print('ego_tarj长度小于2, 已将mask_map置为全 1 矩阵')
-            mask_map = torch.ones((200 , 704))
-
+            lidar_np[:, :3] = box_utils.project_points_by_matrix_torch(lidar_np[:, :3],transformation_matrix)
+        # plot_lidar_point.plot_3d_point_cloud(lidar_np)
+                                                    
         #体素化后的lidar点云
         processed_lidar = self.pre_processor.preprocess(lidar_np)
 
-        # velocity
-        velocity = selected_cav_base['params']['ego_speed']
-        # normalize veloccity by average speed 30 km/h
-        velocity = velocity / 30
-
-        selected_cav_processed.update(
-            {'object_bbx_center': object_bbx_center[object_bbx_mask == 1],
-             'object_ids': object_ids,
-             'projected_lidar': lidar_np,
-             'processed_features': processed_lidar,
-             'velocity': velocity,
-             'plan_trajectory':mask_map,
-             })
+        selected_cav_processed.update({'projected_lidar': lidar_np,
+                                       'processed_features': processed_lidar})
 
         return selected_cav_processed
 

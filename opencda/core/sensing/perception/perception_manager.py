@@ -5,7 +5,7 @@ Perception module base.
 
 # Author: Runsheng Xu <rxx3386@ucla.edu>
 # License: TDG-Attribution-NonCommercial-NoDistrib
-
+import torch
 import weakref
 import sys
 import time
@@ -489,49 +489,54 @@ class PerceptionManager:
             objects = self.deactivate_mode(objects) # maybe 当不检测的时候通过v2x来查到周围的车的位置来作为障碍物的位置
         else:
 
-            rgbs,lidars = self.search_nearby_cav()    # 通过v2x来查到周围的的车的雷达或者rgb数据
-            
-            # if len(rgbs) > 0:
-            #     # 可视化ego车的rgb数据
-            #     rgb_image = cv2.resize(self.rgb_camera[0].image, (0, 0), fx=0.4, fy=0.4)
-            #     cv2.imshow('the image of ego cars', rgb_image)
-            #     cv2.waitKey(1)
-            
-            if len(rgbs) == 0: # 因为第一轮没有周围车的数据，所以要跳过
+            search_nearby_cav_data = self.search_nearby_cav()    # 通过v2x来查到周围的的车的雷达或者rgb数据
+
+            if len(search_nearby_cav_data) == 0: # 因为第一轮没有周围车的数据，所以要跳过
                 objects = self.deactivate_mode(objects)
             else:
                 # TODO: 使用多车的lidar数据来检测障碍物
-                # objects = self.activate_mode_lidar(objects,rgbs)
-                objects = inference_code(opt,objects,self.lidar.data) # 可以改成列表lidars 
+                perception_data = {}
+                perception_data['ego'] = {}
+                perception_data['ego']['lidar'] = self.lidar
+                perception_data['ego']['rgb'] = self.rgb_camera
+                perception_data['ego']['transform'] = self.ego_pos
+                perception_data['ego']['transformation_matrix'] = torch.from_numpy(np.identity(4,dtype=np.float32))
+                
+                perception_data.update(search_nearby_cav_data)        # 添加周围车的数据
+                objects = inference_code(opt,objects,perception_data) # 模型推理
         self.count += 1 # 仿真的步数
-
-        return objects
+        return objects  # 返回障碍物的信息
 
     def search_nearby_cav(self):
         if self.v2x_manager is not None:
-            lidars = []
-            rgbs = []
+            multi_car = {}
             print(f"nearby cav nearby {self.v2x_manager.cav_nearby}")
+            ego_transform = self.ego_pos    # ego的位置
             for  _, vm in self.v2x_manager.cav_nearby.items():
+                car_id = vm.agent.vehicle.id    # 车的ID
+                car_transform = vm.v2x_manager.get_ego_pos()    # 通过V2X获取附近车的位置
+                T = st.car_to_ego(car_transform, ego_transform) # 从车坐标系到ego坐标系的变换矩阵
+
                 lidar = vm.v2x_manager.get_ego_lidar()
-                print(f"有它车的lidar数据啦! {lidar}")
-                
+                rgb = vm.v2x_manager.get_ego_rgb_image()        # 这里的rgb是一个list，里面有四个相机的数据
+
+                # # 可视化nearby车的lidar数据
                 # o3d_pointcloud_encode(lidar.data, lidar.o3d_pointcloud)
                 # o3d_visualizer_show_lidar_only(
                 #     self.o3d_vis,
                 #     self.count,
                 #     lidar.o3d_pointcloud)
-                lidars.append(lidar)
-
-                rgb = vm.v2x_manager.get_ego_rgb_image()    # 这里的rgb是一个list，里面有四个相机的数据
-                print(f"有它车的rgb数据啦! {rgb}")
-
                 # # 可视化nearby车的rgb数据
                 # rgb_image = cv2.resize(rgb[0].image, (0, 0), fx=0.4, fy=0.4)
                 # cv2.imshow('the image of nearby cars', rgb_image)
                 # cv2.waitKey(1)
-                rgbs.append(rgb[0])
-            return rgbs,lidars
+
+                multi_car[car_id] = {}
+                multi_car[car_id]['lidar'] = lidar
+                multi_car[car_id]['rgb'] = rgb
+                multi_car[car_id]['transform'] = car_transform
+                multi_car[car_id]['transformation_matrix'] = T
+            return multi_car
         pass
     
     def activate_mode_lidar(self, objects,rgbs):

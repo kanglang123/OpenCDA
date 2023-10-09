@@ -118,6 +118,11 @@ def x_to_world_transformation(transform):
 
     return matrix
 
+def car_to_ego(car_transform, ego_transform):
+    car = x_to_world_transformation(car_transform)
+    ego = x_to_world_transformation(ego_transform)
+    T = np.dot(ego,np.linalg.inv(car))
+    return T
 
 def bbx_to_world(cords, vehicle):
     """

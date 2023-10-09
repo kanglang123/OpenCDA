@@ -324,8 +324,7 @@ def project_points_by_matrix_torch(points, transformation_matrix):
     # (N, 4)
     points_homogeneous = F.pad(points, (0, 1), mode="constant", value=1)
     # (N, 4)
-    projected_points = torch.einsum("ik, jk->ij", points_homogeneous,
-                                    transformation_matrix)
+    projected_points = torch.einsum("ij, jk->ik", transformation_matrix,points_homogeneous)
     return projected_points[:, :3]
 
 
@@ -808,7 +807,7 @@ def project_points_by_matrix_torch(points, transformation_matrix):
     # (N, 4)
     points_homogeneous = F.pad(points, (0, 1), mode="constant", value=1)
     # (N, 4)
-    projected_points = torch.einsum("ik, jk->ij", points_homogeneous,
+    projected_points = torch.einsum("ij, jk->ik", points_homogeneous,
                                     transformation_matrix)
 
     return projected_points[:, :3] if not is_numpy \
