@@ -62,14 +62,8 @@ def run_scenario(opt, config_yaml):
         while True:
             scenario_manager.tick()     # 更新场景
             transform = single_cav_list[0].vehicle.get_transform()
-            spectator.set_transform(carla.Transform(
-                transform.location +
-                carla.Location(
-                    z=100),
-                carla.Rotation(
-                    pitch=-
-                    90)))
-            
+            spectator.set_transform(carla.Transform(transform.location +carla.Location(z=100),carla.Rotation(pitch=-90)))
+
             scenario_manager.tick()     # 更新场景
 
             for i, single_cav in enumerate(single_cav_list):

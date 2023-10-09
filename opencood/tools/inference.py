@@ -2,7 +2,6 @@
 # Author: Runsheng Xu <rxx3386@ucla.edu>, Hao Xiang <haxiang@g.ucla.edu>,
 # License: TDG-Attribution-NonCommercial-NoDistrib
 
-
 import argparse
 import os
 import time
@@ -41,7 +40,7 @@ def inference_code(opt,objects,search_nearby_cav_data):
     processed_features = []
     for id,data in search_nearby_cav_data.items():
         # TODO 
-        # 多车数据的处理（多车层级的封装，tensor的统一转换、到设备）
+        # 多车数据的处理（多车层级的封装，tensor的统一转换、到设备） 解决了
         # 点云位置的转移需不需要在特征图层面做改动？！！！！有问题需要再改
         processed_lidar = IntermediateFusionDataset.get_item_single_car(opencood_dataset,data) 
         # 前处理，包含了点云的映射到ego车的坐标系下，以及点云的体素化
@@ -54,14 +53,7 @@ def inference_code(opt,objects,search_nearby_cav_data):
     processed_lidar_torch_dict['record_len'] = torch.tensor([record_len])
     processed_lidar_torch_dict = train_utils.to_device(processed_lidar_torch_dict, device)
 
-
-    # # processed_lidar = opencood_dataset.pre_processor.preprocess(lidar_data)   # 前处理
-    # processed_lidar['processed_features']['voxel_coords'] = np.pad(processed_lidar['processed_features']['voxel_coords'], ((0, 0), (1, 0)),mode='constant', constant_values=0)  # 按照opencood的操作
-    # processed_lidar_tensor = {k: torch.from_numpy(v) for k, v in processed_lidar.items()}
-    # processed_lidar_tensor['record_len'] = torch.tensor([record_len])
-    # processed_lidar_tensor = train_utils.to_device(processed_lidar_tensor, device)
-
-    output_dict = model(processed_lidar_torch_dict) # 模型推理
+    output_dict = model(processed_lidar_torch_dict)   # 模型推理
 
     anchor_box = opencood_dataset.post_processor.generate_anchor_box()
     anchor_box_tensor = torch.from_numpy(anchor_box)  
@@ -77,6 +69,6 @@ def inference_code(opt,objects,search_nearby_cav_data):
                 }
     pred_box_tensor, pred_score = opencood_dataset.post_processor.post_process(cars_data, output_dict)
     objects = {'pred_box_tensor':pred_box_tensor, 
-                'pred_score':pred_score}
+               'pred_score':pred_score}
     # TODO：结果的检查和封装
     return objects
