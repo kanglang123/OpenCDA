@@ -18,57 +18,58 @@ from opencood.utils import eval_utils
 from opencood.visualization import vis_utils
 import matplotlib.pyplot as plt
 from opencood.data_utils.datasets.intermediate_fusion_dataset import IntermediateFusionDataset
+from opencood.visualization.vis_utils import bbx2oabb
+from opencda.core.sensing.perception.o3d_lidar_libs import o3d_lidar
 
-def inference_code(opt,objects,search_nearby_cav_data):
-    hypes = yaml_utils.load_yaml(None, opt)
-    print('Dataset Building')
-    opencood_dataset = build_dataset(hypes, visualize=True, train=False)
+def inference_code(opt,objects,perception_data,lidar_sensor):
+    hypes = yaml_utils.load_yaml(None, opt)                                 # 读取配置文件
+    opencood_dataset = build_dataset(hypes, visualize=True, train=False)    # 构建数据集
+    print('opencood_dataset Build done !')
 
-    print('Creating Model')
-    model = train_utils.create_model(hypes)
+    model = train_utils.create_model(hypes)                                 # 构建模型
+    print('Create Model done !')
 
     if torch.cuda.is_available():    # we assume gpu is necessary
         model.cuda()    
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
     print('Loading Model from checkpoint')
     saved_path = opt.model_dir
     _, model = train_utils.load_saved_model(saved_path, model)
-    model.eval()
+    model.eval()    
 
-    record_len = len(search_nearby_cav_data)
-    lidar_data = []
+    record_len = torch.tensor([len(perception_data)])                       # 记录车的数量
     processed_features = []
-    for id,data in search_nearby_cav_data.items():
-        # TODO 
+    for id,data in perception_data.items():
         # 多车数据的处理（多车层级的封装，tensor的统一转换、到设备） 解决了
-        # 点云位置的转移需不需要在特征图层面做改动？！！！！有问题需要再改
-        processed_lidar = IntermediateFusionDataset.get_item_single_car(opencood_dataset,data) 
-        # 前处理，包含了点云的映射到ego车的坐标系下，以及点云的体素化
+        # 点云位置的转移需不需要在特征图层面做改动？ 解决了
+        processed_lidar = IntermediateFusionDataset.get_item_single_car(opencood_dataset,data)  # 前处理，包含了点云的映射到ego车的坐标系下，以及点云的体素化
+        processed_features.append(processed_lidar['processed_features'])                        # 每个车的点云都是单独处理的，所以需要在这里进行拼接
 
-        # 每个车的点云都是单独处理的，所以需要在这里进行拼接
-        processed_features.append(processed_lidar['processed_features'])
+    merged_feature_dict = opencood_dataset.merge_features_to_dict(processed_features)               # 将多个车的特征拼接到一个字典中
+    processed_lidar_torch_dict = opencood_dataset.pre_processor.collate_batch(merged_feature_dict)  # 将字典转换为tensor
+    processed_lidar_torch_dict['record_len'] = torch.tensor([record_len])                           # 记录车的数量
+    processed_lidar_torch_dict['map_mask'] = perception_data['ego']['map_mask']                     # 地图的mask
+    processed_lidar_torch_dict = train_utils.to_device(processed_lidar_torch_dict, device)          # 将tensor转移到设备cuda上
 
-    merged_feature_dict = opencood_dataset.merge_features_to_dict(processed_features)   # 将多个车的特征拼接到一个字典中
-    processed_lidar_torch_dict = opencood_dataset.pre_processor.collate_batch(merged_feature_dict) # 将字典转换为tensor
-    processed_lidar_torch_dict['record_len'] = torch.tensor([record_len])
-    processed_lidar_torch_dict = train_utils.to_device(processed_lidar_torch_dict, device)
+    output_dict = model(processed_lidar_torch_dict)                       # 模型推理
 
-    output_dict = model(processed_lidar_torch_dict)   # 模型推理
-
-    anchor_box = opencood_dataset.post_processor.generate_anchor_box()
-    anchor_box_tensor = torch.from_numpy(anchor_box)  
-    anchor_box_tensor = train_utils.to_device(anchor_box_tensor, device)
+    anchor_box = opencood_dataset.post_processor.generate_anchor_box()    # 生成anchor_box
+    anchor_box_tensor = torch.from_numpy(anchor_box)                      # 将anchor_box转换为tensor
+    anchor_box_tensor = train_utils.to_device(anchor_box_tensor, device)  # 将anchor_box转移到设备cuda上
 
     # 包装车的信息(多级字典)
-    cars_data = { 'ego':{'processed_lidar': processed_lidar_torch_dict,
+    cars_data = { 'ego':{
+                        'processed_lidar': processed_lidar_torch_dict,
                         'anchor_box': anchor_box_tensor,
                         'transformation_matrix': train_utils.to_device(torch.from_numpy(np.identity(4,dtype=np.float32)), device),
-                        # 'record_len': record_len,
+                        'record_len': record_len,
                         # 'plan_trajectory':plan_trajectory}
                         }
                 }
-    pred_box_tensor, pred_score = opencood_dataset.post_processor.post_process(cars_data, output_dict)
-    objects = {'pred_box_tensor':pred_box_tensor, 
-               'pred_score':pred_score}
-    # TODO：结果的检查和封装
+    
+    # 后处理：NMS极大值抑制、锚框微调、去除小尺寸和低于阈值的候选框
+    pred_box_tensor, pred_score = opencood_dataset.post_processor.post_process(cars_data, output_dict)  
+
+    objects = o3d_lidar(objects,pred_box_tensor,'hwl',lidar_sensor)  # 结果的检查和封装
     return objects

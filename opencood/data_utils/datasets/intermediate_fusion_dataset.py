@@ -252,20 +252,20 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         lidar_np = selected_cav_base['lidar'].data
         lidar_np = shuffle_points(lidar_np)
         # 可视化nearby车的lidar数据
-        plot_lidar_point.plot_3d_point_cloud(lidar_np)
+        # plot_lidar_point.plot_3d_point_cloud(lidar_np)
 
         # remove points that hit itself
         lidar_np = mask_ego_points(lidar_np)
-        plot_lidar_point.plot_3d_point_cloud(lidar_np)
+        # plot_lidar_point.plot_3d_point_cloud(lidar_np)
 
         # clipping    ！！这里有问题
         lidar_np = mask_points_by_range(lidar_np,self.params['preprocess']['cav_lidar_range'])
-        plot_lidar_point.plot_3d_point_cloud(lidar_np)
+        # plot_lidar_point.plot_3d_point_cloud(lidar_np)
 
         # project the lidar to ego space
         if self.proj_first:
             lidar_np[:, :3] = box_utils.project_points_by_matrix_torch(lidar_np[:, :3],transformation_matrix)
-        plot_lidar_point.plot_3d_point_cloud(lidar_np)
+        # plot_lidar_point.plot_3d_point_cloud(lidar_np)
                                                     
         #体素化后的lidar点云
         processed_lidar = self.pre_processor.preprocess(lidar_np)

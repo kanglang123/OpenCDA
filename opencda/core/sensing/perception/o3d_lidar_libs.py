@@ -19,6 +19,7 @@ import opencda.core.sensing.perception.sensor_transformation as st
 from opencda.core.sensing.perception.obstacle_vehicle import \
     is_vehicle_cococlass, ObstacleVehicle
 from opencda.core.sensing.perception.static_obstacle import StaticObstacle
+from opencood.utils import common_utils, box_utils
 
 VIRIDIS = np.array(cm.get_cmap('plasma').colors)
 VID_RANGE = np.linspace(0.0, 1.0, VIRIDIS.shape[0])
@@ -298,4 +299,66 @@ def o3d_camera_lidar_fusion(objects,
             else:
                 objects['static'] = [static_obstacle]
 
+    return objects
+
+def o3d_lidar(objects,bbx_corner,order, lidar_sensor):
+    """
+    Utilize the 3D lidar points to extend the 2D bounding box
+    from camera to 3D bounding box under world coordinates.
+
+    Parameters
+    ----------
+    objects : dict
+        The dictionary contains all object detection results.
+
+    lidar_3d : np.ndarray
+        Raw 3D lidar points in lidar coordinate system.
+
+    projected_lidar : np.ndarray
+        3D lidar points projected to the camera space.
+
+    lidar_sensor : carla.sensor
+        The lidar sensor.
+
+    Returns
+    -------
+    objects : dict
+        The update object dictionary that contains 3d bounding boxes.
+    """
+
+    if not isinstance(bbx_corner, np.ndarray):
+        bbx_corner = common_utils.torch_tensor_to_numpy(bbx_corner)
+
+    if len(bbx_corner.shape) == 2:
+        bbx_corner = box_utils.boxes_to_corners_3d(bbx_corner,order)
+    oabbs = []
+
+    for i in range(bbx_corner.shape[0]):
+        bbx = bbx_corner[i]
+        # o3d use right-hand coordinate
+        bbx[:, :1] = - bbx[:, :1]
+
+        tmp_pcd = o3d.geometry.PointCloud()
+        tmp_pcd.points = o3d.utility.Vector3dVector(bbx)
+
+        # add o3d bounding box
+        aabb = tmp_pcd.get_axis_aligned_bounding_box()
+        aabb.color = (0, 1, 0)
+
+        # get the eight corner of the bounding boxes.
+        corner = np.asarray(aabb.get_box_points())
+        # covert back to unreal coordinate
+        corner[:, :1] = -corner[:, :1]
+        corner = corner.transpose()
+        # extend (3, 8) to (4, 8) for homogenous transformation
+        corner = np.r_[corner, [np.ones(corner.shape[1])]]
+        # project to world reference
+        corner = st.sensor_to_world(corner, lidar_sensor.get_transform())
+        corner = corner.transpose()[:, :3]
+
+        obstacle_vehicle = ObstacleVehicle(corner, aabb)
+        if 'vehicles' in objects:
+            objects['vehicles'].append(obstacle_vehicle)
+        else:
+            objects['vehicles'] = [obstacle_vehicle]
     return objects

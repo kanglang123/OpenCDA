@@ -165,7 +165,7 @@ class VehicleManager(object):
         self.agent.set_destination(
             start_location, end_location, clean, end_reset)
 
-    def update_info(self,opt):
+    def update_info(self,opt,rx,ry):
         """
         Call perception and localization module to retrieve surrounding info an ego position.
         """
@@ -178,7 +178,7 @@ class VehicleManager(object):
         ego_image = self.perception_manager.rgb_camera
 
         # object detection
-        objects = self.perception_manager.detect(opt,ego_pos)
+        objects = self.perception_manager.detect(opt,ego_pos,rx,ry)
 
         # update the ego pose for map manager
         self.map_manager.update_information(ego_pos)
@@ -196,8 +196,8 @@ class VehicleManager(object):
         """
         # visualize the bev map if needed
         self.map_manager.run_step()
-        target_speed, target_pos = self.agent.run_step(target_speed)
-        control = self.controller.run_step(target_speed, target_pos)
+        target_speed, target_pos,rx,ry = self.agent.run_step(target_speed)    # 目标速度和目标位置
+        control = self.controller.run_step(target_speed, target_pos)    # 控制指令(油门、刹车、转向等)
 
         # dump data
         if self.data_dumper:
@@ -205,7 +205,7 @@ class VehicleManager(object):
                                       self.localizer,
                                       self.agent)
 
-        return control
+        return control,rx,ry
 
     def destroy(self):
         """

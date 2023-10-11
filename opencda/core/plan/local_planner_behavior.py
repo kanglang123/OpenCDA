@@ -603,21 +603,15 @@ class LocalPlanner(object):
             self._trajectory_buffer = trajectory.copy()
 
         # Target waypoint
-        self.target_waypoint, self._target_speed = \
-            self._trajectory_buffer[min(1, len(self._trajectory_buffer) - 1)]
+        self.target_waypoint, self._target_speed = self._trajectory_buffer[min(1, len(self._trajectory_buffer) - 1)]
 
         # Purge the queue of obsolete waypoints
         vehicle_transform = self._ego_pos
         self.pop_buffer(vehicle_transform)
 
         if self.debug_trajectory:
-            draw_trajetory_points(self._vehicle.get_world(),
-                                  self._long_plan_debug,
-                                  color=carla.Color(0, 255, 0),
-                                  size=0.05,
-                                  lt=0.1)
-            # draw_trajetory_points(self._vehicle.get_world(),
-            # self._trajectory_buffer, size=0.1, arrow_size=0.2, z=0.1, lt=0.1)
+            draw_trajetory_points(self._vehicle.get_world(),self._long_plan_debug,color=carla.Color(0, 1, 1),size=0.1,lt=0.3)
+            draw_trajetory_points(self._vehicle.get_world(),self._trajectory_buffer, size=0.1, arrow_size=0.2, z=0.1, lt=0.3)
 
         if self.debug:
             draw_trajetory_points(self._vehicle.get_world(),
@@ -634,6 +628,4 @@ class LocalPlanner(object):
                                   lt=0.2)
 
         return self._target_speed, \
-               self.target_waypoint.transform.location if hasattr(
-                   self.target_waypoint,
-                   'is_junction') else self.target_waypoint.location
+               self.target_waypoint.transform.location if hasattr(self.target_waypoint,'is_junction') else self.target_waypoint.location

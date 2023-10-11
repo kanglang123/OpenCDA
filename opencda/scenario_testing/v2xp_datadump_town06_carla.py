@@ -58,18 +58,18 @@ def run_scenario(opt, config_yaml):
         #                               scenario_params['current_time'],
         #                               'data_protocol.yaml')
         # save_yaml(scenario_params, save_yaml_name)
-
+        rx = [0]
+        ry = [0]
         while True:
             scenario_manager.tick()     # 更新场景
             transform = single_cav_list[0].vehicle.get_transform()
             spectator.set_transform(carla.Transform(transform.location +carla.Location(z=100),carla.Rotation(pitch=-90)))
 
             scenario_manager.tick()     # 更新场景
-
+            
             for i, single_cav in enumerate(single_cav_list):
-                single_cav.update_info(opt)
-                
-                control = single_cav.run_step()
+                single_cav.update_info(opt,rx,ry)
+                control,rx,ry = single_cav.run_step()
                 single_cav.vehicle.apply_control(control)
 
             # for rsu in rsu_list:

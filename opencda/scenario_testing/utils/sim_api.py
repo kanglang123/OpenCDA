@@ -335,7 +335,7 @@ class ScenarioManager:
             destination = carla.Location(x=cav_config['destination'][0],
                                          y=cav_config['destination'][1],
                                          z=cav_config['destination'][2])
-            vehicle_manager.update_info(opt)
+            vehicle_manager.update_info(opt,[0],[0])
             vehicle_manager.set_destination(
                 vehicle_manager.vehicle.get_location(),
                 destination,
@@ -345,7 +345,7 @@ class ScenarioManager:
 
         return single_cav_list
 
-    def create_platoon_manager(self, map_helper=None, data_dump=False):
+    def create_platoon_manager(self, opt,map_helper=None, data_dump=False):
         """
         Create a list of platoons.
 
@@ -400,7 +400,7 @@ class ScenarioManager:
 
                 # create vehicle manager for each cav
                 vehicle_manager = VehicleManager(
-                    vehicle, cav, ['platooning'],
+                    opt, vehicle,cav,['platooning'],
                     self.carla_map, self.cav_world,
                     current_time=self.scenario_params['current_time'],
                     data_dumping=data_dump)

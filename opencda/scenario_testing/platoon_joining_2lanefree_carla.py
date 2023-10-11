@@ -11,10 +11,8 @@ import carla
 
 import opencda.scenario_testing.utils.sim_api as sim_api
 import opencda.scenario_testing.utils.customized_map_api as map_api
-from opencda.scenario_testing.evaluations.evaluate_manager import \
-    EvaluationManager
-from opencda.scenario_testing.utils.yaml_utils import \
-    load_yaml
+from opencda.scenario_testing.evaluations.evaluate_manager import EvaluationManager
+from opencda.scenario_testing.utils.yaml_utils import load_yaml
 
 
 def run_scenario(opt, config_yaml):
@@ -22,9 +20,7 @@ def run_scenario(opt, config_yaml):
         # first define the path of the yaml file and 2lanefreemap file
         scenario_params = load_yaml(config_yaml)
         current_path = os.path.dirname(os.path.realpath(__file__))
-        xodr_path = os.path.join(
-            current_path,
-            '../assets/2lane_freeway_simplified/2lane_freeway_simplified.xodr')
+        xodr_path = os.path.join(current_path,'../assets/2lane_freeway_simplified/2lane_freeway_simplified.xodr')
 
         # create scenario manager
         scenario_manager = sim_api.ScenarioManager(scenario_params,
@@ -32,24 +28,16 @@ def run_scenario(opt, config_yaml):
                                                    opt.version,
                                                    xodr_path=xodr_path)
         if opt.record:
-            scenario_manager.client. \
-                start_recorder("platoon_joining_2lanefree_carla.log", True)
+            scenario_manager.client.start_recorder("platoon_joining_2lanefree_carla.log", True)
 
         # create platoon members
-        platoon_list = \
-            scenario_manager.create_platoon_manager(
-                map_helper=map_api.spawn_helper_2lanefree,
-                data_dump=False)
+        platoon_list = scenario_manager.create_platoon_manager(opt,map_helper=map_api.spawn_helper_2lanefree,data_dump=False)
 
         # create single cavs
-        single_cav_list = \
-            scenario_manager.create_vehicle_manager(['platooning'],
-                                                    map_api.
-                                                    spawn_helper_2lanefree)
+        single_cav_list = scenario_manager.create_vehicle_manager(opt,['platooning'],map_api.spawn_helper_2lanefree)
 
         # create background traffic in carla
-        traffic_manager, bg_veh_list = \
-            scenario_manager.create_traffic_carla()
+        traffic_manager, bg_veh_list = scenario_manager.create_traffic_carla()
 
         eval_manager = \
             EvaluationManager(scenario_manager.cav_world,
@@ -72,7 +60,7 @@ def run_scenario(opt, config_yaml):
                         pitch=-
                         90)))
             for platoon in platoon_list:
-                platoon.update_information()
+                platoon.update_information(opt)
                 platoon.run_step()
 
             for i, single_cav in enumerate(single_cav_list):
@@ -80,7 +68,7 @@ def run_scenario(opt, config_yaml):
                 if single_cav.v2x_manager.in_platoon():
                     single_cav_list.pop(i)
                 else:
-                    single_cav.update_info()
+                    single_cav.update_info(opt)
                     control = single_cav.run_step()
                     single_cav.vehicle.apply_control(control)
 

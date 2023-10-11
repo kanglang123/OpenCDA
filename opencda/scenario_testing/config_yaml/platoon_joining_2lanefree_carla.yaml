@@ -79,7 +79,7 @@ vehicle_base: &vehicle_base
       min_dist: 3 # used to pop out the waypoints too close to current location
       trajectory_dt: 0.25 # for every dt seconds, we sample a trajectory point from the trajectory path as next goal state
       debug: false # whether to draw future/history waypoints
-      debug_trajectory: false # whether to draw the trajectory points and path
+      debug_trajectory: true # whether to draw the trajectory points and path
 
   controller: &base_controller
     type: pid_controller # this has to be exactly the same name as the controller py file

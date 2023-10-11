@@ -278,33 +278,25 @@ class VoxelPostprocessor(BasePostprocessor):
             # convert regression map back to bounding box
             # (N, W*L*anchor_num, 7)
             batch_box3d = self.delta_to_boxes3d(reg, anchor_box)
-            mask = \
-                torch.gt(prob, self.params['target_args']['score_threshold'])
+            mask = torch.gt(prob, self.params['target_args']['score_threshold'])
             mask = mask.view(1, -1)
             mask_reg = mask.unsqueeze(2).repeat(1, 1, 7)
 
             # during validation/testing, the batch size should be 1
             assert batch_box3d.shape[0] == 1
-            boxes3d = torch.masked_select(batch_box3d[0],
-                                          mask_reg[0]).view(-1, 7)
+            boxes3d = torch.masked_select(batch_box3d[0],mask_reg[0]).view(-1, 7)
             scores = torch.masked_select(prob[0], mask[0])
 
             # convert output to bounding box
             if len(boxes3d) != 0:
                 # (N, 8, 3)
-                boxes3d_corner = \
-                    box_utils.boxes_to_corners_3d(boxes3d,
-                                                  order=self.params['order'])
+                boxes3d_corner = box_utils.boxes_to_corners_3d(boxes3d,order=self.params['order'])
                 # (N, 8, 3)
-                projected_boxes3d = \
-                    box_utils.project_box3d(boxes3d_corner,
-                                            transformation_matrix)
+                projected_boxes3d = box_utils.project_box3d(boxes3d_corner,transformation_matrix)
                 # convert 3d bbx to 2d, (N,4)
-                projected_boxes2d = \
-                    box_utils.corner_to_standup_box_torch(projected_boxes3d)
+                projected_boxes2d = box_utils.corner_to_standup_box_torch(projected_boxes3d)
                 # (N, 5)
-                boxes2d_score = \
-                    torch.cat((projected_boxes2d, scores.unsqueeze(1)), dim=1)
+                boxes2d_score = torch.cat((projected_boxes2d, scores.unsqueeze(1)), dim=1)
 
                 pred_box2d_list.append(boxes2d_score)
                 pred_box3d_list.append(projected_boxes3d)
@@ -326,10 +318,7 @@ class VoxelPostprocessor(BasePostprocessor):
         scores = scores[keep_index]
 
         # nms
-        keep_index = box_utils.nms_rotated(pred_box3d_tensor,
-                                           scores,
-                                           self.params['nms_thresh']
-                                           )
+        keep_index = box_utils.nms_rotated(pred_box3d_tensor,scores,self.params['nms_thresh'])
 
         pred_box3d_tensor = pred_box3d_tensor[keep_index]
 
@@ -337,8 +326,7 @@ class VoxelPostprocessor(BasePostprocessor):
         scores = scores[keep_index]
 
         # filter out the prediction out of the range.
-        mask = \
-            box_utils.get_mask_for_boxes_within_range_torch(pred_box3d_tensor)
+        mask = box_utils.get_mask_for_boxes_within_range_torch(pred_box3d_tensor)
         pred_box3d_tensor = pred_box3d_tensor[mask, :, :]
         scores = scores[mask]
 
@@ -381,23 +369,18 @@ class VoxelPostprocessor(BasePostprocessor):
         # (W*L*2, 7)
         anchors_reshaped = anchors.view(-1, 7).float()
         # the diagonal of the anchor 2d box, (W*L*2)
-        anchors_d = torch.sqrt(
-            anchors_reshaped[:, 4] ** 2 + anchors_reshaped[:, 5] ** 2)
+        anchors_d = torch.sqrt(anchors_reshaped[:, 4] ** 2 + anchors_reshaped[:, 5] ** 2)
         anchors_d = anchors_d.repeat(N, 2, 1).transpose(1, 2)
         anchors_reshaped = anchors_reshaped.repeat(N, 1, 1)
 
         # Inv-normalize to get xyz
-        boxes3d[..., [0, 1]] = torch.mul(deltas[..., [0, 1]], anchors_d) + \
-                               anchors_reshaped[..., [0, 1]]
-        boxes3d[..., [2]] = torch.mul(deltas[..., [2]],
-                                      anchors_reshaped[..., [3]]) + \
-                            anchors_reshaped[..., [2]]
+        boxes3d[..., [0, 1]] = torch.mul(deltas[..., [0, 1]], anchors_d) + anchors_reshaped[..., [0, 1]]
+        boxes3d[..., [2]] = torch.mul(deltas[..., [2]],anchors_reshaped[..., [3]]) + anchors_reshaped[..., [2]]
         # hwl
-        boxes3d[..., [3, 4, 5]] = torch.exp(
-            deltas[..., [3, 4, 5]]) * anchors_reshaped[..., [3, 4, 5]]
+        boxes3d[..., [3, 4, 5]] = torch.exp(deltas[..., [3, 4, 5]]) * anchors_reshaped[..., [3, 4, 5]]
         # yaw angle
         boxes3d[..., 6] = deltas[..., 6] + anchors_reshaped[..., 6]
-
+        
         return boxes3d
 
     @staticmethod

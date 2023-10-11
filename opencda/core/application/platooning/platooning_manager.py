@@ -204,13 +204,13 @@ class PlatooningManager(object):
                 self.vehicle_manager_list[i].vehicle.get_location(),
                 destination, clean=True)
 
-    def update_information(self):
+    def update_information(self,opt):
         """
         Update CAV world information for every member in the list.
         """
         self.reset_speed()
         for i in range(len(self.vehicle_manager_list)):
-            self.vehicle_manager_list[i].update_info()
+            self.vehicle_manager_list[i].update_info(opt)
         # update the center location of the platoon
         self.cal_center_loc()
 
