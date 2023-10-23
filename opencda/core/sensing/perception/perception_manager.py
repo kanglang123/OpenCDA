@@ -523,14 +523,19 @@ class PerceptionManager:
         return objects  # 返回障碍物的信息
     def mask_map(self,rx,ry):
         plan_trajectory_list = np.array([rx,ry,np.zeros_like(rx)]).T
-        ego_pos = [self.ego_pos.location.x,self.ego_pos.location.y,self.ego_pos.location.z,0,self.ego_pos.rotation.yaw,0]   # [x, y, z, roll, yaw, pitch]        plan_trajectory_list = box_utils.project_points_by_matrix_torch(plan_trajectory_list,x1_to_x2([0,0,0,0,0,0],ego_pos))
-        plan_trajectory_list = box_utils.project_points_by_matrix_torch(plan_trajectory_list,x1_to_x2([0,0,0,0,0,180],[0,0,0,0,0,0]))
+        ego_pos = [self.ego_pos.location.x,self.ego_pos.location.y,self.ego_pos.location.z,0,self.ego_pos.rotation.yaw,0]   # [x, y, z, roll, yaw, pitch]     
+        plan_trajectory_list = box_utils.project_points_by_matrix_torch_diy(plan_trajectory_list,x1_to_x2([0,0,0,0,0,0],ego_pos))
         plan_trajectory_list = torch.from_numpy(plan_trajectory_list)
         if len(plan_trajectory_list) > 1 :
             mask_map = mask_points_by_plan_trajectory(self.lidar.data,plan_trajectory_list,[-140.8, -40, -3, 140.8, 40, 1])
         else:
             # print('ego_tarj长度小于2, 已将mask_map置为全 1 矩阵')
             mask_map = torch.ones((200 , 704))
+
+        # # 可视化mask_map
+        # fig2 = plt.figure()
+        # plt.imsave('my_plot.png',(mask_map.detach().cpu().numpy()))
+
         return mask_map
 
 

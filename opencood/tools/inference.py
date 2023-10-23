@@ -43,7 +43,7 @@ def inference_code(opt,objects,perception_data,lidar_sensor):
     for id,data in perception_data.items():
         # 多车数据的处理（多车层级的封装，tensor的统一转换、到设备） 解决了
         # 点云位置的转移需不需要在特征图层面做改动？ 解决了
-        processed_lidar = IntermediateFusionDataset.get_item_single_car(opencood_dataset,data)  # 前处理，包含了点云的映射到ego车的坐标系下，以及点云的体素化
+        processed_lidar = IntermediateFusionDataset.get_item_single_car(opencood_dataset,data)  # 数据集中的前处理，包含了点云的映射到ego车的坐标系下，以及点云的体素化
         processed_features.append(processed_lidar['processed_features'])                        # 每个车的点云都是单独处理的，所以需要在这里进行拼接
 
     merged_feature_dict = opencood_dataset.merge_features_to_dict(processed_features)               # 将多个车的特征拼接到一个字典中
@@ -56,17 +56,17 @@ def inference_code(opt,objects,perception_data,lidar_sensor):
 
     anchor_box = opencood_dataset.post_processor.generate_anchor_box()    # 生成anchor_box
     anchor_box_tensor = torch.from_numpy(anchor_box)                      # 将anchor_box转换为tensor
-    anchor_box_tensor = train_utils.to_device(anchor_box_tensor, device)  # 将anchor_box转移到设备cuda上
 
     # 包装车的信息(多级字典)
     cars_data = { 'ego':{
                         'processed_lidar': processed_lidar_torch_dict,
                         'anchor_box': anchor_box_tensor,
-                        'transformation_matrix': train_utils.to_device(torch.from_numpy(np.identity(4,dtype=np.float32)), device),
+                        'transformation_matrix': torch.from_numpy(np.identity(4,dtype=np.float32)),
                         'record_len': record_len,
                         # 'plan_trajectory':plan_trajectory}
                         }
                 }
+    cars_data = train_utils.to_device(cars_data, device)          # 将tensor转移到设备cuda上
     
     # 后处理：NMS极大值抑制、锚框微调、去除小尺寸和低于阈值的候选框
     pred_box_tensor, pred_score = opencood_dataset.post_processor.post_process(cars_data, output_dict)  

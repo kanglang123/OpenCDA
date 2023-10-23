@@ -813,7 +813,36 @@ def project_points_by_matrix_torch(points, transformation_matrix):
     return projected_points[:, :3] if not is_numpy \
         else projected_points[:, :3].numpy()
 
+def project_points_by_matrix_torch_diy(points, transformation_matrix):
+    """
+    Project the points to another coordinate system based on the
+    transformation matrix.
 
+    Parameters
+    ----------
+    points : torch.Tensor
+        3D points, (N, 3)
+    transformation_matrix : torch.Tensor
+        Transformation matrix, (4, 4)
+    Returns
+    -------
+    projected_points : torch.Tensor
+        The projected points, (N, 3)
+    """
+    points, is_numpy = \
+        common_utils.check_numpy_to_torch(points)
+    transformation_matrix, _ = \
+        common_utils.check_numpy_to_torch(transformation_matrix)
+
+    # convert to homogeneous coordinates via padding 1 at the last dimension.
+    # (N, 4)
+    points_homogeneous = F.pad(points, (0, 1), mode="constant", value=1)
+    # (N, 4)
+    projected_points = torch.einsum("ik, jk->ij", points_homogeneous,
+                                    transformation_matrix)
+
+    return projected_points[:, :3] if not is_numpy \
+        else projected_points[:, :3].numpy()
 def box_encode(
         boxes,
         anchors,

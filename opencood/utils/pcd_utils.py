@@ -176,7 +176,7 @@ def mask_points_by_plan_trajectory(points, ego_tarj,limit_range):
     # # print(sum(mask))
 
     # return points[mask]
-    return communication_masks
+    return communication_masks[0][0]
 
 
 def mask_ego_points(points):

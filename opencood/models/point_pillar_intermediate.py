@@ -64,12 +64,11 @@ class PointPillarIntermediate(nn.Module):
         mask = 0
         spatial_features_2d = batch_dict['spatial_features_2d']
         
+        # # 可视化
         # a = plan_trajectory[0][0].squeeze()*batch_dict['spatial_features'][0][0]
         # fig2 = plt.figure()
-        # plt.imshow((a.detach().cpu().numpy()))
-        # plt.colorbar()
-        # plt.title('feature_map_viewer')
-        
+        # plt.imsave('my_plot.png',(a.detach().cpu().numpy()))
+       
         # 检测头
         psm = self.cls_head(spatial_features_2d)
         rm = self.reg_head(spatial_features_2d)
