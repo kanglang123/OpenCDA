@@ -789,8 +789,7 @@ class BehaviorAgent(object):
             return 0, None
 
         # 2. when the temporary route is finished, we return to the global route
-        if len(self.get_local_planner().get_waypoints_queue()) == 0 \
-                and len(self.get_local_planner().get_waypoint_buffer()) <= 2:
+        if len(self.get_local_planner().get_waypoints_queue()) == 0 and len(self.get_local_planner().get_waypoint_buffer()) <= 2:
             print('Destination Reset!')
             # in case the vehicle is disabled overtaking function
             # at the beginning
@@ -803,7 +802,7 @@ class BehaviorAgent(object):
                 clean=True,
                 clean_history=True)
 
-        # intersection behavior. if the car is near a intersection, no overtake is allowed
+        # intersection behavior. if the car is near a intersection, no overtake is allowed  在交叉路口不允许超车
         if is_intersection:
             self.overtake_allowed = False
         else:
@@ -811,7 +810,6 @@ class BehaviorAgent(object):
 
         # Path generation based on the global route
         rx, ry, rk, ryaw = self._local_planner.generate_path()
-
 
         # check whether lane change is allowed
         self.lane_change_allowed = self.check_lane_change_permission(lane_change_allowed, collision_detector_enabled, rk)
@@ -886,6 +884,7 @@ class BehaviorAgent(object):
         target_speed, target_loc = self._local_planner.run_step(
             rx, ry, rk, target_speed=self.max_speed - self.speed_lim_dist
             if not target_speed else target_speed)
+        print("轨迹长度:rx", abs(rx[0]-rx[-1])," ry:", abs(ry[0]-ry[-1]))
         return target_speed, target_loc,rx,ry
 
 

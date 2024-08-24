@@ -270,7 +270,7 @@ class IntermediateFusionDataset(basedataset.BaseDataset):
         #体素化后的lidar点云
         processed_lidar = self.pre_processor.preprocess(lidar_np)
 
-        selected_cav_processed.update({'projected_lidar': lidar_np,
+        selected_cav_processed.update({'projected_lidar':    lidar_np,
                                        'processed_features': processed_lidar})
 
         return selected_cav_processed

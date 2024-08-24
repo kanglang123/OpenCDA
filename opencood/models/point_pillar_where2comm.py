@@ -78,16 +78,18 @@ class PointPillarWhere2comm(nn.Module):
             p.requires_grad = False
 
     def forward(self, data_dict):
-        voxel_features = data_dict['processed_lidar']['voxel_features']
-        voxel_coords = data_dict['processed_lidar']['voxel_coords']
-        voxel_num_points = data_dict['processed_lidar']['voxel_num_points']
-        record_len = data_dict['record_len'] #每个batch相当于每个场景中有多少个有感知能力的车
-        pairwise_t_matrix = data_dict['pairwise_t_matrix'] #位置转移矩阵
+        voxel_features   = data_dict['voxel_features']
+        voxel_coords     = data_dict['voxel_coords']
+        voxel_num_points = data_dict['voxel_num_points']
+        record_len       = data_dict['record_len']
+        map_mask  = data_dict['map_mask']
         
         batch_dict = {'voxel_features': voxel_features,
                       'voxel_coords': voxel_coords,
                       'voxel_num_points': voxel_num_points,
-                      'record_len': record_len}
+                      'record_len': record_len,
+                      'map_mask':map_mask
+                      }
         # n, 4 -> n, c
         batch_dict = self.pillar_vfe(batch_dict)
         # n, c -> N, C, H, W
@@ -116,7 +118,6 @@ class PointPillarWhere2comm(nn.Module):
             fused_feature, communication_rates = self.fusion_net(batch_dict['spatial_features'],
                                                                  psm_single,
                                                                  record_len,
-                                                                 pairwise_t_matrix,
                                                                  self.backbone)
             if self.shrink_flag:
                 fused_feature = self.shrink_conv(fused_feature)
@@ -124,11 +125,12 @@ class PointPillarWhere2comm(nn.Module):
             fused_feature, communication_rates = self.fusion_net(spatial_features_2d,
                                                                  psm_single,
                                                                  record_len,
-                                                                 pairwise_t_matrix)
+                                                                 self.backbone)
 
         #detect head
         psm = self.cls_head(fused_feature)
         rm = self.reg_head(fused_feature)
 
-        output_dict = {'psm': psm, 'rm': rm, 'com': communication_rates}
+        output_dict = {'psm': psm, 
+                       'rm': rm}
         return output_dict

@@ -55,7 +55,7 @@ rsu_base: &rsu_base
         dropoff_zero_intensity: 0.4
         noise_stddev: 0.02
     localization:
-      activate: true # when not activated, ego position will be retrieved from server directly
+      activate: false # when not activated, ego position will be retrieved from server directly
       dt: *delta # used for kalman filter
       gnss: # gnss sensor configuration
         noise_alt_stddev: 0.05
@@ -66,7 +66,7 @@ rsu_base: &rsu_base
 vehicle_base: &vehicle_base
   sensing: &base_sensing
     perception: &base_perception
-      activate: 1 # when not activated, objects positions will be retrieved from server directly
+      activate: true # when not activated, objects positions will be retrieved from server directly
       camera_visualize: 1 # how many camera images need to be visualized. 0 means no visualization for camera
       camera_num: 4 # how many cameras are mounted on the vehicle. Maximum 3(frontal, left and right cameras)
       lidar_visualize: 1 # whether to visualize lidar points using open3d
@@ -82,13 +82,13 @@ vehicle_base: &vehicle_base
         dropoff_zero_intensity: 0.4
         noise_stddev: 0.02
     localization: &base_localize
-      activate: true # when not activated, ego position will be retrieved from server directly
+      activate: false # when not activated, ego position will be retrieved from server directly
       dt: *delta # used for kalman filter
       gnss: # gnss sensor configuration
         noise_alt_stddev: 0.005
         noise_lat_stddev: 1e-6
         noise_lon_stddev: 1e-6
-        heading_direction_stddev: 0.1 # degree
+        heading_direction_stddev: 0.1  # degree
         speed_stddev: 0.2
       debug_helper: &loc_debug_helper
         show_animation: false # whether to show real-time trajectory plotting
@@ -160,7 +160,7 @@ carla_traffic_manager:
   # Used only when vehicle_list is a number.
   #  x_min, x_max, y_min, y_max, x_step, y_step, vehicle_num
   range:
-    - [-11, 12, 100, 200, 3.5, 15, 25]
+    - [-11, 12, 100, 200, 10, 15, 5]
 
 
 # define scenario. In this scenario, a 4-vehicle platoon already exists.
@@ -170,10 +170,10 @@ scenario:
       spawn_position: [12.00, 192.31, 3.0]
       id: -1
 
-  single_cav_list:  # CAVs 
-    - <<: *vehicle_base # 第一个车的定义
-      spawn_position: [12.00, 192.31, 0.3, 0, -90, 0] # 设置起点
-      destination: [67.12, 150.2, 1.0]                # 设置终点
+  single_cav_list:                # CAVs 
+    - <<: *vehicle_base           # 第一个车的定义
+      spawn_position: [12.00, 192.31, 0.3, 0, -90, 0]   # 设置起点
+      destination: [67.12, 150.2, 1.0]                  # 设置终点
       v2x:
         <<: *base_v2x
         communication_range: 90
@@ -183,9 +183,9 @@ scenario:
           <<: *base_local_planner
           debug_trajectory: true
           debug: false
-    - <<: *vehicle_base # 第二个车的定义
+    - <<: *vehicle_base           # 第2个车的定义
       spawn_position: [-5.51, 110.24, 0.3, 0, 90, 0]
-      destination: [-2.43, 263, 0.3]
+      destination: [22.43, 263, 1.0]
       v2x:
         <<: *base_v2x
         communication_range: 90
@@ -195,3 +195,15 @@ scenario:
           <<: *base_local_planner
           debug_trajectory: true
           debug: false
+    # - <<: *vehicle_base           # 第3个车的定义
+    #   spawn_position: [-5.51, 123.24, 0.3, 0, 90, 0]
+    #   destination: [32.43, 263, 1.0]
+    #   v2x:
+    #     <<: *base_v2x
+    #     communication_range: 90
+    #   behavior:
+    #     <<: *base_behavior
+    #     local_planner:
+    #       <<: *base_local_planner
+    #       debug_trajectory: true
+    #       debug: false

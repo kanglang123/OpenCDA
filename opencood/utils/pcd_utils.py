@@ -136,7 +136,7 @@ def mask_points_by_plan_trajectory(points, ego_tarj,limit_range):
     # print('计算可行域，轨迹长度为：',len(ego_tarj))
     
     # 假设车宽为5m
-    car_width = 20.0
+    car_width = 10.0
 
     # 生成可行域    feasible_regions_x、y的两列分别是可行域的边界
     feasible_regions_x, feasible_regions_y = generate_feasible_regions(ego_tarj[:,0], ego_tarj[:,1], car_width)
@@ -154,7 +154,7 @@ def mask_points_by_plan_trajectory(points, ego_tarj,limit_range):
     mask_map = mask_map.float()
     mask_map = torch.unsqueeze(mask_map,dim=0)
     mask_map = torch.unsqueeze(mask_map,dim=0)
-    communication_masks = F.interpolate(mask_map, size=(200, 704),mode='bilinear', align_corners=False) 
+    communication_masks = F.interpolate(mask_map, size=(100, 352),mode='bilinear', align_corners=False) 
     # plt.figure(figsize=(8, 6))
     # plt.imshow(communication_masks[0][0])
     # plt.show()

@@ -477,8 +477,8 @@ class PerceptionManager:
         -------
         objects : list
             A list that contains all detected obstacle vehicles.
-
         """
+
         self.ego_pos = ego_pos
         objects = {'vehicles': [],
                    'traffic_lights': []}
@@ -487,13 +487,11 @@ class PerceptionManager:
             self.search_nearby_cav()
             objects = self.deactivate_mode(objects) # maybe 当不检测的时候通过v2x来查到周围的车的位置来作为障碍物的位置
         else:
-
             search_nearby_cav_data = self.search_nearby_cav()    # 通过v2x来查到周围的的车的雷达或者rgb数据
 
-            if len(search_nearby_cav_data) == 0 and 0: # 因为第一轮没有周围车的数据，所以要跳过
+            if len(search_nearby_cav_data) == 0 and 0:           # 因为第一轮没有周围车的数据，所以要跳过
                 objects = self.deactivate_mode(objects)
             else:
-                
                 # 使用OpenCOOD中的多车的lidar数据来检测障碍物
                 perception_data = {}
                 perception_data['ego'] = {}
@@ -517,10 +515,10 @@ class PerceptionManager:
                         self.lidar.o3d_pointcloud,
                         objects)
                 self.objects = objects
-
-                # objects = self.activate_mode(objects)   # 使用原工程中的yolov5+lidar的融合来检测障碍物
-        self.count += 1 # 仿真的步数
-        return objects  # 返回障碍物的信息
+                # objects = self.activate_mode(objects)                                  # 使用原工程中的yolov5+lidar的融合来检测障碍物
+        self.count += 1     # 仿真的步数
+        return objects      # 返回障碍物的信息
+    
     def mask_map(self,rx,ry):
         plan_trajectory_list = np.array([rx,ry,np.zeros_like(rx)]).T
         ego_pos = [self.ego_pos.location.x,self.ego_pos.location.y,self.ego_pos.location.z,0,self.ego_pos.rotation.yaw,0]   # [x, y, z, roll, yaw, pitch]     
@@ -530,38 +528,21 @@ class PerceptionManager:
             mask_map = mask_points_by_plan_trajectory(self.lidar.data,plan_trajectory_list,[-140.8, -40, -3, 140.8, 40, 1])
         else:
             # print('ego_tarj长度小于2, 已将mask_map置为全 1 矩阵')
-            mask_map = torch.ones((200 , 704))
-
-        # # 可视化mask_map
-        # fig2 = plt.figure()
-        # plt.imsave('my_plot.png',(mask_map.detach().cpu().numpy()))
-
+            mask_map = torch.ones((100 , 352))
         return mask_map
-
 
     def search_nearby_cav(self):
         if self.v2x_manager is not None:
             multi_car = {}
             print(f"nearby cav nearby {self.v2x_manager.cav_nearby}")
-            ego_transform = self.ego_pos    # ego的位置
+            ego_transform = self.ego_pos                        # ego的位置
             for  _, vm in self.v2x_manager.cav_nearby.items():
-                car_id = vm.agent.vehicle.id    # 车的ID
+                car_id = vm.agent.vehicle.id                    # 车的ID
                 car_transform = vm.v2x_manager.get_ego_pos()    # 通过V2X获取附近车的位置
                 T = st.car_to_ego(car_transform, ego_transform) # 从车坐标系到ego坐标系的变换矩阵
 
                 lidar = vm.v2x_manager.get_ego_lidar()
                 rgb = vm.v2x_manager.get_ego_rgb_image()        # 这里的rgb是一个list，里面有四个相机的数据
-
-                # # 可视化nearby车的lidar数据
-                # o3d_pointcloud_encode(lidar.data, lidar.o3d_pointcloud)
-                # o3d_visualizer_show_lidar_only(
-                #     self.o3d_vis,
-                #     self.count,
-                #     lidar.o3d_pointcloud)
-                # # 可视化nearby车的rgb数据
-                # rgb_image = cv2.resize(rgb[0].image, (0, 0), fx=0.4, fy=0.4)
-                # cv2.imshow('the image of nearby cars', rgb_image)
-                # cv2.waitKey(1)
 
                 multi_car[car_id] = {}
                 multi_car[car_id]['lidar'] = lidar

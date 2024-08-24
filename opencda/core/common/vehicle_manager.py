@@ -196,8 +196,8 @@ class VehicleManager(object):
         """
         # visualize the bev map if needed
         self.map_manager.run_step()
-        target_speed, target_pos,rx,ry = self.agent.run_step(target_speed)    # 目标速度和目标位置
-        control = self.controller.run_step(target_speed, target_pos)    # 控制指令(油门、刹车、转向等)
+        target_speed, target_pos,rx,ry = self.agent.run_step(target_speed)    # 计算得到下一步仿真的目标速度和目标位置，以及规划的轨迹点坐标
+        control = self.controller.run_step(target_speed, target_pos)          # 控制指令(油门、刹车、转向等)
 
         # dump data
         if self.data_dumper:
